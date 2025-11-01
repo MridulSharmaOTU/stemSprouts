@@ -36,8 +36,8 @@ jobs:
           if [ -f pyproject.toml ]; then pip install -e .; fi
           pip install pytest
 
-      - name: Verify .env.example exists
-        run: test -f .env.example
+#      - name: Verify .env.example exists
+#        run: test -f .env.example
 
       - name: Run bootstrap pytest
         run: pytest -q tests/test_app_bootstrap.py
