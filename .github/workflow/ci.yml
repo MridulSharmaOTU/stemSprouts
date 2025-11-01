@@ -1,10 +1,15 @@
 name: CI
 
 on:
+  pull_request:
+    branches: [ main ]            # Gate PRs targeting main
   push:
     branches: [ main, develop, dev ]
-  pull_request:
-    branches: [ main, develop, dev ]
+  merge_group:
+    branches: [ main ]            # supports Merge Queue
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
