@@ -17,13 +17,39 @@ Anything else is out of scope for this file.
 from __future__ import annotations
 
 import importlib
-import os
+import importlib.util
+import sys
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
+
+
+# ------------------------------
+# Repo root resolution (so imports work from tests/)
+# ------------------------------
+
+def _repo_root() -> Path:
+    """Best-effort detection of the repository root that contains the `api/` package.
+    Falls back to the tests' parent directory.
+    """
+    here = Path(__file__).resolve()
+    candidates = [
+        here.parent.parent,  # <root>/tests/ -> <root>
+        here.parents[2] if len(here.parents) > 2 else None,
+        Path.cwd(),
+    ]
+    for c in candidates:
+        if c and (c / "api").exists():
+            return c
+    return here.parent.parent
+
+
+_ROOT = _repo_root()
+if str(_ROOT) not in map(str, sys.path):
+    sys.path.insert(0, str(_ROOT))
 
 
 # ------------------------------
@@ -80,22 +106,32 @@ def _extract_version_from_settings(settings: Any) -> Optional[str]:
 
 
 def _is_settings_subclass_of_basesettings(settings_cls: type | None) -> bool:
+    """Return True if `settings_cls` subclasses a Pydantic BaseSettings (v1 or v2).
+    Uses dynamic imports to avoid static import errors in editors like Pylance.
+    """
     if settings_cls is None:
         return False
+
+    # Pydantic Settings v2: pydantic_settings.BaseSettings
     try:
-        # pydantic-settings v2
-        from pydantic_settings import BaseSettings as V2Base
-        if issubclass(settings_cls, V2Base):
-            return True
+        if importlib.util.find_spec("pydantic_settings") is not None:
+            mod = importlib.import_module("pydantic_settings")
+            V2Base = getattr(mod, "BaseSettings", None)
+            if V2Base is not None and issubclass(settings_cls, V2Base):
+                return True
     except Exception:
         pass
+
+    # Pydantic v1: pydantic.BaseSettings
     try:
-        # pydantic v1
-        from pydantic import BaseSettings as V1Base
-        if issubclass(settings_cls, V1Base):
-            return True
+        if importlib.util.find_spec("pydantic") is not None:
+            mod = importlib.import_module("pydantic")
+            V1Base = getattr(mod, "BaseSettings", None)
+            if V1Base is not None and issubclass(settings_cls, V1Base):
+                return True
     except Exception:
         pass
+
     return False
 
 
@@ -210,12 +246,12 @@ def test_config_reads_from_environment_and_env_file(monkeypatch: pytest.MonkeyPa
         env_file_declared = bool(getattr(mc, "get", lambda k, d=None: None)("env_file", None) or getattr(mc, "env_file", None))
     # pydantic v1: inner Config with env_file
     if not env_file_declared and hasattr(Settings, "Config"):
-        env_file_declared = getattr(Settings.Config, "env_file", None) in {".env", Path(".env").resolve().as_posix()}
+        env_file_declared = getattr(Settings.Config, "env_file", None) in {".env", (_ROOT / ".env").resolve().as_posix()}
 
     assert env_file_declared, "Settings must declare env_file='.env' so .env is loaded"
 
-    # .env.example must exist and document the vars
-    example = Path(".env.example")
+    # .env.example must exist and document the vars (at repo root)
+    example = _ROOT / ".env.example"
     assert example.exists(), ".env.example must exist at repo root"
     text = example.read_text(encoding="utf-8", errors="ignore")
     for key in ("APP_ENV", "LOG_LEVEL", "ALLOWED_ORIGINS", "MAX_BODY_BYTES", "APP_VERSION"):
