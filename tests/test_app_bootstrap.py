@@ -3,8 +3,8 @@ Strict bootstrap and contract tests for the FastAPI backend.
 
 Scope (only):
 - System router (api/routers/system.py)
-  • GET /healthz → 200 {"ok": true}
-  • GET /version → 200 {"version": "<from config>"}
+  • GET /system/healthz → 200 {"ok": true}
+  • GET /system/version → 200 {"version": "<from config>"}
 - Config (api/core/config.py) using pydantic-settings
   • Vars: APP_ENV (local|dev|prod), LOG_LEVEL, ALLOWED_ORIGINS (CSV), MAX_BODY_BYTES (default 65536), APP_VERSION.
   • Load from env and .env (documented in .env.example).
@@ -155,8 +155,8 @@ def client(app: FastAPI) -> TestClient:
 # ------------------------------
 
 def test_healthz_contract(client: TestClient) -> None:
-    res = client.get("/healthz")
-    assert res.status_code == 200, "GET /healthz must return 200"
+    res = client.get("/system/healthz")
+    assert res.status_code == 200, "GET /system/healthz must return 200"
     data = res.json()
     assert isinstance(data, dict), "/healthz must return a JSON object"
     assert set(data.keys()) == {"ok"}, "/healthz response must only contain 'ok'"
@@ -168,8 +168,8 @@ def test_version_contract_uses_config(client: TestClient) -> None:
     version = _extract_version_from_settings(settings)
     assert version, "APP_VERSION (or equivalent) must be provided by config"
 
-    res = client.get("/version")
-    assert res.status_code == 200, "GET /version must return 200"
+    res = client.get("/system/version")
+    assert res.status_code == 200, "GET /system/version must return 200"
     data = res.json()
     assert isinstance(data, dict), "/version must return a JSON object"
     assert set(data.keys()) == {"version"}, "/version response must only contain 'version'"
