@@ -1,2 +1,5 @@
-httpx
 fastapi
+httpx
+pydantic
+pydantic-settings
+starlette.testclient
