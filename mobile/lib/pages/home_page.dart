@@ -23,6 +23,8 @@
 // ===============================================================
 
 import 'package:flutter/material.dart';
+import 'login_page.dart';
+import 'signup_page.dart';
 
 /// HomePage is the first screen users see.
 ///
@@ -53,6 +55,32 @@ class HomePage extends StatelessWidget {
                 const _HeroSection(),
                 const SizedBox(height: _Space.lg),
                 _PrimaryCta(onPressed: () => _handleStart(context)),
+                const SizedBox(height: _Space.sm),
+                // Small row with Log in / Sign up so users can authenticate.
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                        );
+                      },
+                      icon: const Icon(Icons.login),
+                      label: const Text('Log in'),
+                    ),
+                    const SizedBox(width: _Space.md),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SignupPage()),
+                        );
+                      },
+                      icon: const Icon(Icons.person_add),
+                      label: const Text('Sign up'),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: _Space.xl),
                 // Cards communicate quick value and future surface area
                 // (progress, practice, settings) without blocking the CTA.
@@ -172,7 +200,7 @@ class _HomeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      color: Theme.of(context).colorScheme.surfaceVariant,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(_Space.card),

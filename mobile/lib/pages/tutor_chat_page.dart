@@ -189,7 +189,7 @@ class _MessageBubble extends StatelessWidget {
     final theme = Theme.of(context);
     final bg = isUser
         ? theme.colorScheme.primaryContainer
-        : theme.colorScheme.surfaceVariant;
+        : theme.colorScheme.surfaceContainerHighest;
     final align = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final radius = isUser
         ? const BorderRadius.only(

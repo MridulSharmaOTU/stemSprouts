@@ -40,7 +40,7 @@ class ProgressPage extends StatelessWidget {
           // Overview card: quick stats that are easy to demo.
           Card(
             elevation: 0,
-            color: Theme.of(context).colorScheme.surfaceVariant,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
