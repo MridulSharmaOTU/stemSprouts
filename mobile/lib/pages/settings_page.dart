@@ -11,8 +11,9 @@
 // ===============================================================
 
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -23,6 +24,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static const String _settingsAssetPath = 'lib/data/user-settings.json';
   bool _dailyReminder = false; // demo default; wire to storage later
   int _grade = 3; // demo default; 1..12 typical range
 
@@ -34,10 +36,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadSettings() async {
     try {
-      final jsonString =
-      await rootBundle.loadString('lib/data/user-settings.json');
-      final Map<String, dynamic> data =
-      jsonDecode(jsonString) as Map<String, dynamic>;
+      final Map<String, dynamic> data = await _readSettingsFromDisk();
 
       final bool? notifications = data['notifications'] as bool?;
       final num? grade = data['grade'] as num?;
@@ -58,6 +57,74 @@ class _SettingsPageState extends State<SettingsPage> {
     } catch (err, stack) {
       debugPrint('Failed to load user settings: $err');
       debugPrint('$stack');
+    }
+  }
+
+  Future<Map<String, dynamic>> _readSettingsFromDisk() async {
+    final file = await _ensureSettingsFile();
+    try {
+      final jsonString = await file.readAsString();
+      final Map<String, dynamic> data =
+          jsonDecode(jsonString) as Map<String, dynamic>;
+      return data;
+    } on FormatException {
+      final defaultContents = await rootBundle.loadString(_settingsAssetPath);
+      await file.writeAsString(defaultContents);
+      return jsonDecode(defaultContents) as Map<String, dynamic>;
+    }
+  }
+
+  Future<File> _ensureSettingsFile() async {
+    final candidates = <Directory>[
+      Directory('${Directory.current.path}/lib/data'),
+      Directory('${Directory.systemTemp.path}/stem_sprouts/settings'),
+    ];
+
+    Object? lastError;
+    for (final directory in candidates) {
+      try {
+        if (!await directory.exists()) {
+          await directory.create(recursive: true);
+        }
+
+        final file = File('${directory.path}/user-settings.json');
+        if (!await file.exists()) {
+          final defaultContents = await rootBundle.loadString(_settingsAssetPath);
+          await file.writeAsString(defaultContents);
+        }
+        return file;
+      } catch (err, stack) {
+        if (err is FileSystemException && err.osError != null) {
+          lastError = err.osError;
+        } else {
+          lastError = err;
+        }
+        debugPrint(
+            'Settings storage path not writable (${directory.path}): $err');
+        debugPrint('$stack');
+      }
+    }
+
+    throw FileSystemException(
+      'Unable to prepare settings file for persistence.',
+      candidates.isNotEmpty ? candidates.last.path : '',
+      lastError is OSError ? lastError as OSError : null,
+    );
+  }
+
+  Future<bool> _saveSettings() async {
+    try {
+      final file = await _ensureSettingsFile();
+      final encoded = jsonEncode({
+        'notifications': _dailyReminder,
+        'grade': _grade,
+      });
+      await file.writeAsString(encoded);
+      return true;
+    } catch (err, stack) {
+      debugPrint('Failed to save user settings: $err');
+      debugPrint('$stack');
+      return false;
     }
   }
 
@@ -106,14 +173,18 @@ class _SettingsPageState extends State<SettingsPage> {
           SizedBox(
             height: 44,
             child: ElevatedButton(
-              onPressed: () {
-                // Replace with persistence call later.
+              onPressed: () async {
+                final success = await _saveSettings();
+                if (!mounted) {
+                  return;
+                }
+
+                final message = success
+                    ? '${_Copy.savedSnack} (${_dailyReminder ? _Copy.on : _Copy.off}, Grade $_grade)'
+                    : _Copy.saveError;
+
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '${_Copy.savedSnack} (${_dailyReminder ? _Copy.on : _Copy.off}, Grade $_grade)',
-                    ),
-                  ),
+                  SnackBar(content: Text(message)),
                 );
               },
               child: const Text(_Copy.saveBtn),
@@ -152,5 +223,6 @@ class _Copy {
   static const savedSnack = 'Settings saved';
   static const on = 'on';
   static const off = 'off';
+  static const saveError = 'Unable to save settings. Please try again.';
   static const footerHint = 'Tip: Start a session in Tutor to update your streak.';
 }
