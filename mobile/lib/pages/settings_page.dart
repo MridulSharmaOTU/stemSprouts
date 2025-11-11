@@ -10,13 +10,9 @@
 // - Button triggers a snackbar for visible feedback during early demos.
 // ===============================================================
 
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+
+import '../data/user_settings_store.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -26,9 +22,10 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  static const String _settingsAssetPath = 'lib/data/user-settings.json';
   bool _dailyReminder = false; // demo default; wire to storage later
   int _grade = 3; // demo default; 1..12 typical range
+
+  final UserSettingsStore _store = const UserSettingsStore();
 
   @override
   void initState() {
@@ -38,7 +35,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadSettings() async {
     try {
-      final Map<String, dynamic> data = await _readSettingsFromDisk();
+      final Map<String, dynamic> data = await _store.load();
 
       final bool? notifications = data['notifications'] as bool?;
       final num? grade = data['grade'] as num?;
@@ -62,45 +59,11 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<Map<String, dynamic>> _readSettingsFromDisk() async {
-    final defaultContents = await rootBundle.loadString(_settingsAssetPath);
-    try {
-      final file = await _settingsFile();
-      if (!await file.exists()) {
-        await file.create(recursive: true);
-        await file.writeAsString(defaultContents);
-        return jsonDecode(defaultContents) as Map<String, dynamic>;
-      }
-
-      final persisted = await file.readAsString();
-      return jsonDecode(persisted) as Map<String, dynamic>;
-    } on FormatException {
-      debugPrint('Corrupted settings detected; restoring defaults.');
-      final file = await _settingsFile();
-      await file.writeAsString(defaultContents);
-      return jsonDecode(defaultContents) as Map<String, dynamic>;
-    }
-  }
-
   Future<bool> _saveSettings() async {
-    try {
-      final encoded = jsonEncode({
-        'notifications': _dailyReminder,
-        'grade': _grade,
-      });
-      final file = await _settingsFile();
-      await file.writeAsString(encoded);
-      return true;
-    } catch (err, stack) {
-      debugPrint('Failed to save user settings: $err');
-      debugPrint('$stack');
-      return false;
-    }
-  }
-
-  Future<File> _settingsFile() async {
-    final dir = await getApplicationDocumentsDirectory();
-    return File(p.join(dir.path, 'user-settings.json'));
+    return _store.save({
+      'notifications': _dailyReminder,
+      'grade': _grade,
+    });
   }
 
   @override
