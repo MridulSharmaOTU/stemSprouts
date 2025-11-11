@@ -26,7 +26,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _dailyReminder = false; // persisted default
-  int _grade = 1; // persisted default; 1..12 typical range
+  int _grade = 1; // persisted default; 1..12 range
   bool _saving = false;
   Map<String, dynamic> _userSettings = const {};
 
