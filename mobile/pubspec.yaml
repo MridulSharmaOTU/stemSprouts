@@ -1,0 +1,20 @@
+name: stem_sprouts_mobile
+description: StemSprouts mobile application
+publish_to: 'none'
+
+version: 0.1.0+1
+
+environment:
+  sdk: '>=2.19.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  path_provider: ^2.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
