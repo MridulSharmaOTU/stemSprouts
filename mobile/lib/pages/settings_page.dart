@@ -32,20 +32,32 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadSettings();
   }
 
-  Future<void> _loadSettings() aync {
+  Future<void> _loadSettings() async {
     try {
-      final jsonString = await rootBundle.loadString('lib/data/user-settings.json');
-      final data = jsonDecode(jsonString) as Map<String, dynamic>;
+      final jsonString =
+      await rootBundle.loadString('lib/data/user-settings.json');
+      final Map<String, dynamic> data =
+      jsonDecode(jsonString) as Map<String, dynamic>;
 
-      final notifications = data['notifications'] as bool?;
-      final grade = data['grade'] as int?;
+      final bool? notifications = data['notifications'] as bool?;
+      final num? grade = data['grade'] as num?;
+
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
-        _dailyReminder = notifications ?? _dailyReminder;
-        _grade = grade ?? _grade;
+        if (notifications != null) {
+          _dailyReminder = notifications;
+        }
+        if (grade != null) {
+          final int parsedGrade = grade.round().clamp(1, 12).toInt();
+          _grade = parsedGrade;
+        }
       });
-    } catch (e) {
-      debugPrint('Error loading settings: $e');
+    } catch (err, stack) {
+      debugPrint('Failed to load user settings: $err');
+      debugPrint('$stack');
     }
   }
 
