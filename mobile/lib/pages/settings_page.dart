@@ -10,7 +10,10 @@
 // - Button triggers a snackbar for visible feedback during early demos.
 // ===============================================================
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
+
+import 'package:flutter/services.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -22,6 +25,41 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   bool _dailyReminder = false; // demo default; wire to storage later
   int _grade = 3; // demo default; 1..12 typical range
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final jsonString =
+      await rootBundle.loadString('lib/data/user-settings.json');
+      final Map<String, dynamic> data =
+      jsonDecode(jsonString) as Map<String, dynamic>;
+
+      final bool? notifications = data['notifications'] as bool?;
+      final num? grade = data['grade'] as num?;
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        if (notifications != null) {
+          _dailyReminder = notifications;
+        }
+        if (grade != null) {
+          final int parsedGrade = grade.round().clamp(1, 12).toInt();
+          _grade = parsedGrade;
+        }
+      });
+    } catch (err, stack) {
+      debugPrint('Failed to load user settings: $err');
+      debugPrint('$stack');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
