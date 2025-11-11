@@ -11,10 +11,11 @@
 // ===============================================================
 
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import 'settings_persistence.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -25,6 +26,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   static const String _settingsAssetPath = 'lib/data/user-settings.json';
+  final SettingsPersistence _persistence = createSettingsPersistence();
   bool _dailyReminder = false; // demo default; wire to storage later
   int _grade = 3; // demo default; 1..12 typical range
 
@@ -61,65 +63,24 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<Map<String, dynamic>> _readSettingsFromDisk() async {
-    final file = await _ensureSettingsFile();
+    final defaultContents = await rootBundle.loadString(_settingsAssetPath);
     try {
-      final jsonString = await file.readAsString();
-      final Map<String, dynamic> data =
-          jsonDecode(jsonString) as Map<String, dynamic>;
-      return data;
+      final persisted = await _persistence.load(defaultContents);
+      return jsonDecode(persisted) as Map<String, dynamic>;
     } on FormatException {
-      final defaultContents = await rootBundle.loadString(_settingsAssetPath);
-      await file.writeAsString(defaultContents);
+      debugPrint('Corrupted settings detected; restoring defaults.');
+      await _persistence.save(defaultContents);
       return jsonDecode(defaultContents) as Map<String, dynamic>;
     }
   }
 
-  Future<File> _ensureSettingsFile() async {
-    final candidates = <Directory>[
-      Directory('${Directory.current.path}/lib/data'),
-      Directory('${Directory.systemTemp.path}/stem_sprouts/settings'),
-    ];
-
-    Object? lastError;
-    for (final directory in candidates) {
-      try {
-        if (!await directory.exists()) {
-          await directory.create(recursive: true);
-        }
-
-        final file = File('${directory.path}/user-settings.json');
-        if (!await file.exists()) {
-          final defaultContents = await rootBundle.loadString(_settingsAssetPath);
-          await file.writeAsString(defaultContents);
-        }
-        return file;
-      } catch (err, stack) {
-        if (err is FileSystemException && err.osError != null) {
-          lastError = err.osError;
-        } else {
-          lastError = err;
-        }
-        debugPrint(
-            'Settings storage path not writable (${directory.path}): $err');
-        debugPrint('$stack');
-      }
-    }
-
-    throw FileSystemException(
-      'Unable to prepare settings file for persistence.',
-      candidates.isNotEmpty ? candidates.last.path : '',
-      lastError is OSError ? lastError as OSError : null,
-    );
-  }
-
   Future<bool> _saveSettings() async {
     try {
-      final file = await _ensureSettingsFile();
       final encoded = jsonEncode({
         'notifications': _dailyReminder,
         'grade': _grade,
       });
-      await file.writeAsString(encoded);
+      await _persistence.save(encoded);
       return true;
     } catch (err, stack) {
       debugPrint('Failed to save user settings: $err');
