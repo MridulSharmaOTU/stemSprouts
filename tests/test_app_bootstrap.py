@@ -1,4 +1,4 @@
-"""\
+"""
 Strict bootstrap and contract tests for the FastAPI backend.
 
 Scope (only):
