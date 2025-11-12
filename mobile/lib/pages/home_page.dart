@@ -23,6 +23,8 @@
 // ===============================================================
 
 import 'package:flutter/material.dart';
+import 'login_page.dart';
+import 'signup_page.dart';
 
 /// HomePage is the first screen users see.
 ///
@@ -53,6 +55,32 @@ class HomePage extends StatelessWidget {
                 const _HeroSection(),
                 const SizedBox(height: _Space.lg),
                 _PrimaryCta(onPressed: () => _handleStart(context)),
+                const SizedBox(height: _Space.sm),
+                // Small row with Log in / Sign up so users can authenticate.
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                        );
+                      },
+                      icon: const Icon(Icons.login),
+                      label: const Text('Log in'),
+                    ),
+                    const SizedBox(width: _Space.md),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SignupPage()),
+                        );
+                      },
+                      icon: const Icon(Icons.person_add),
+                      label: const Text('Sign up'),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: _Space.xl),
                 // Cards communicate quick value and future surface area
                 // (progress, practice, settings) without blocking the CTA.
@@ -81,7 +109,10 @@ class HomePage extends StatelessWidget {
 
           return Semantics(
             label: 'Home screen',
-            child: SingleChildScrollView(child: content),
+            child: Container(
+              color: const Color.fromARGB(235, 129, 190, 255),
+              child: SingleChildScrollView(child: content),
+            ),
           );
         },
       ),
@@ -109,22 +140,33 @@ class _HeroSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _Copy.title,
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w700,
+    return Center(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Image.asset(
+            'assets/images/WelcomeToStemSprouts.png',
+            width: 640,
+            height: 280,
+            fit: BoxFit.contain,
+            semanticLabel: 'Welcome to ${_Copy.appName}',
+            filterQuality: FilterQuality.none,
           ),
-          semanticsLabel: 'Welcome to ${_Copy.appName}',
-        ),
-        const SizedBox(height: _Space.sm),
-        Text(
-          _Copy.subtitle,
-          style: theme.textTheme.bodyLarge,
-        ),
-      ],
+          Image.asset(
+            'assets/images/STEMsproutLogoFinal.png',
+            width: 320,
+            height: 320,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.none,
+          ),
+          const SizedBox(height: _Space.sm),
+          Text(
+            _Copy.subtitle,
+            style: theme.textTheme.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }

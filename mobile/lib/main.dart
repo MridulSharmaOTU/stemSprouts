@@ -62,7 +62,7 @@ class _RootScaffoldState extends State<RootScaffold> {
     final titles = <String>['Home', 'Tutor', 'Progress', 'Settings'];
 
     return Scaffold(
-      appBar: AppBar(title: Text(titles[_index])),
+      // removed top AppBar so no "Home" bar appears
       body: pages[_index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
