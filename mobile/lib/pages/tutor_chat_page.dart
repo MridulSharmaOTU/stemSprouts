@@ -62,11 +62,12 @@ class _TutorChatPageState extends State<TutorChatPage> {
     _focusNode.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
+    return Container(
+      color: const Color.fromARGB(235, 129, 190, 255),
+      child: Column(
+        children: [
         Expanded(
           child: ListView.builder(
             controller: _scrollController,
@@ -85,6 +86,7 @@ class _TutorChatPageState extends State<TutorChatPage> {
           onSend: _handleSend,
         ),
       ],
+      ),
     );
   }
 
@@ -207,9 +209,26 @@ class _MessageBubble extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: align,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
+          // Tutor avatar (left side, tutor messages only)
+          if (!isUser)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset(
+                  'assets/images/StemSproutLogoFinal.png',
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.none,
+                ),
+              ),
+            ),
+          // Message bubble
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
             child: DecoratedBox(

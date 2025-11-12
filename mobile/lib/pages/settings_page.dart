@@ -26,9 +26,11 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.all(_Space.page),
-        children: [
+      child: Container(
+        color: const Color.fromARGB(235, 129, 190, 255),
+        child: ListView(
+          padding: const EdgeInsets.all(_Space.page),
+          children: [
           Text(
             _Copy.title,
             style: Theme.of(context)
@@ -90,6 +92,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
+    ),
     );
   }
 }

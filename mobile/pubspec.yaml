@@ -13,3 +13,7 @@ dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/images/  # add this line (register all images in the folder)
+    - assets/images/WelcomeToStemSprouts.png

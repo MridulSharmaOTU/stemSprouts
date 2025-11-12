@@ -109,7 +109,10 @@ class HomePage extends StatelessWidget {
 
           return Semantics(
             label: 'Home screen',
-            child: SingleChildScrollView(child: content),
+            child: Container(
+              color: const Color.fromARGB(235, 129, 190, 255),
+              child: SingleChildScrollView(child: content),
+            ),
           );
         },
       ),
@@ -137,22 +140,33 @@ class _HeroSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _Copy.title,
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w700,
+    return Center(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Image.asset(
+            'assets/images/WelcomeToStemSprouts.png',
+            width: 640,
+            height: 280,
+            fit: BoxFit.contain,
+            semanticLabel: 'Welcome to ${_Copy.appName}',
+            filterQuality: FilterQuality.none,
           ),
-          semanticsLabel: 'Welcome to ${_Copy.appName}',
-        ),
-        const SizedBox(height: _Space.sm),
-        Text(
-          _Copy.subtitle,
-          style: theme.textTheme.bodyLarge,
-        ),
-      ],
+          Image.asset(
+            'assets/images/STEMsproutLogoFinal.png',
+            width: 320,
+            height: 320,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.none,
+          ),
+          const SizedBox(height: _Space.sm),
+          Text(
+            _Copy.subtitle,
+            style: theme.textTheme.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }

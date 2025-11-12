@@ -25,7 +25,9 @@ class ProgressPage extends StatelessWidget {
     const currentStreak = 0;
 
     return SafeArea(
-      child: ListView(
+      child: Container(
+        color: const Color.fromARGB(235, 129, 190, 255),
+        child: ListView(
         padding: const EdgeInsets.all(_Space.page),
         children: [
           Text(
@@ -100,6 +102,7 @@ class ProgressPage extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }
