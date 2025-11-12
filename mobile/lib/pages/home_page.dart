@@ -153,7 +153,7 @@ class _HeroSection extends StatelessWidget {
             filterQuality: FilterQuality.none,
           ),
           Image.asset(
-            'assets/images/STEMsproutLogoFinal.png',
+            'assets/images/StemSproutLogoFinal.png',
             width: 320,
             height: 320,
             fit: BoxFit.contain,
