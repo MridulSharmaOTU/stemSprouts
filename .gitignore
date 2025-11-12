@@ -1,12 +1,9 @@
-.dart_tool/
+**/.dart_tool
 **/build/
-pubspec.lock
+**/pubspec.lock
+**/.flutter-plugins-dependencies
 
 .idea/
 .vscode/
-
-mobile/.dart_tool/
-mobile/build/
-mobile/pubspec.lock
 
 *.log
