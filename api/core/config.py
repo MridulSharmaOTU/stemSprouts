@@ -5,6 +5,9 @@ class Settings(BaseSettings):
     """Minimal config needed by the version contract test."""
 
     APP_VERSION: str = "0.0.0"
+    OPENROUTER_API_KEY: str
+    OPENROUTER_API_MODEL: str = "tngtech/deepseek-r1t2-chimera:free"
+    OPENROUTER_API_URL: str = "https://openrouter.ai/api/v1/chat/completions"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

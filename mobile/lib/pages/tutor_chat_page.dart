@@ -15,14 +15,20 @@
 // - Keep components small (_MessageBubble, _Composer) to reduce merge conflicts.
 // ===============================================================
 
+import 'dart:convert'; // For json serialization
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+const _backendUrl = 'http://10.0.2.2:8000/chat/completions';
 
 /// Lightweight representation of a chat message for the scaffold.
 /// Avoids pulling in full models until the API contract is finalized.
 class _MessageEntry {
-  final String text;
+  String text;
   final bool isUser;
-  const _MessageEntry({required this.text, required this.isUser});
+  bool isLoading;
+  _MessageEntry({required this.text, required this.isUser, this.isLoading = false});
 }
 
 /// TutorChatPage — minimal chat surface with a message list and composer.
@@ -42,18 +48,22 @@ class TutorChatPage extends StatefulWidget {
   State<TutorChatPage> createState() => _TutorChatPageState();
 }
 
-class _TutorChatPageState extends State<TutorChatPage> {
+class _TutorChatPageState extends State<TutorChatPage> with AutomaticKeepAliveClientMixin<TutorChatPage> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
+  bool _isReplying = false;
 
   // Start with a friendly system message so the UI has content on first run.
-  final List<_MessageEntry> _messages = const [
+  final List<_MessageEntry> _messages = [
     _MessageEntry(
       text: 'Hi! I\'m your step-by-step tutor. Ask a question to begin.',
       isUser: false,
     ),
   ];
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void dispose() {
@@ -62,61 +72,120 @@ class _TutorChatPageState extends State<TutorChatPage> {
     _focusNode.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context); // This is needed to keep the state alive.
     return Container(
       color: const Color.fromARGB(235, 129, 190, 255),
       child: Column(
         children: [
-        Expanded(
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.all(16),
-            itemCount: _messages.length,
-            itemBuilder: (context, i) {
-              final m = _messages[i];
-              return _MessageBubble(text: m.text, isUser: m.isUser);
-            },
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount: _messages.length,
+              itemBuilder: (context, i) {
+                final m = _messages[i];
+                return _MessageBubble(text: m.text, isUser: m.isUser, isLoading: m.isLoading);
+              },
+            ),
           ),
-        ),
-        const Divider(height: 1),
-        _Composer(
-          controller: _controller,
-          focusNode: _focusNode,
-          onSend: _handleSend,
-        ),
-      ],
+          const Divider(height: 1),
+          _Composer(
+            controller: _controller,
+            focusNode: _focusNode,
+            onSend: _handleSend,
+            isReplying: _isReplying,
+          ),
+        ],
       ),
     );
   }
 
-  void _handleSend(String raw) {
-    final text = raw.trim();
-    if (text.isEmpty) return;
+  void _handleSend(String raw) async {
+    // Refocus every time
+    _focusNode.requestFocus();
 
+    final text = raw.trim();
+    if (text.isEmpty || _isReplying) return;
+
+    // Clear if we sent the message
+    _controller.clear();
+
+    setState(() {
+      _isReplying = true;
+    });
+
+    // Add the user's message to the list
     setState(() {
       _messages.add(_MessageEntry(text: text, isUser: true));
     });
-
-    // Provide immediate feedback for UX and grading; real app will call API.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Stub: would call /api/tutor')),
-    );
-
-    widget.onSend?.call(text);
-
-    // Optional: add a placeholder tutor response so the UI shows a conversation.
-    setState(() {
-      _messages.add(const _MessageEntry(
-        text: 'Let\'s break it down. What\'s the first step you can try?',
-        isUser: false,
-      ));
-    });
-
-    _controller.clear();
-
-    // Auto-scroll to the bottom so messages are immediately visible.
     _scrollToEnd();
+
+    // Add a placeholder for the tutor's response and get a reference to it.
+    final tutorResponse = _MessageEntry(text: '', isUser: false, isLoading: true);
+    setState(() {
+      _messages.add(tutorResponse);
+    });
+    _scrollToEnd();
+
+    // Call the backend
+    try {
+      final client = http.Client();
+      final request = http.Request(
+        'POST',
+        Uri.parse(_backendUrl),
+      );
+
+      request.headers['Content-Type'] = 'application/json';
+      // Encode the entire message history, excluding the loading placeholder
+      request.body = jsonEncode({ // TODO: What happens when we reach the max context size? We need some way of "pruning" old messages.
+        'messages': _messages
+            .where((m) => !m.isLoading)
+            .map((m) => {'role': m.isUser ? 'user' : 'assistant', 'content': m.text})
+            .toList(),
+        'stream': true,
+      });
+
+      final response = await client.send(request);
+
+      if (response.statusCode == 200) {
+        var isFirstChunk = true;
+        // Listen to the stream of response chunks
+        await for (var chunk in response.stream.transform(utf8.decoder)) {
+          if (mounted) {
+            setState(() {
+              if (isFirstChunk) {
+                tutorResponse.isLoading = false;
+                isFirstChunk = false;
+              }
+              tutorResponse.text += chunk;
+              _scrollToEnd();
+            });
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() { // TODO: Special message type for errors?
+            tutorResponse.isLoading = false;
+            tutorResponse.text = 'Error processing your request: ${response.reasonPhrase}';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() { // TODO: Special message type for errors?
+          tutorResponse.isLoading = false;
+          tutorResponse.text = 'Error connecting to the backend: $e';
+        });
+      }
+    } finally {
+      setState(() {
+        _isReplying = false;
+      });
+      widget.onSend?.call(text);
+    }
   }
 
   void _scrollToEnd() {
@@ -138,11 +207,13 @@ class _Composer extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onSend;
+  final bool isReplying;
 
   const _Composer({
     required this.controller,
     required this.focusNode,
     required this.onSend,
+    required this.isReplying,
   });
 
   @override
@@ -168,9 +239,9 @@ class _Composer extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             ElevatedButton.icon(
-              onPressed: () => onSend(controller.text),
-              icon: const Icon(Icons.send),
-              label: const Text('Send'),
+              onPressed: isReplying ? null : () => onSend(controller.text),
+              icon: Icon(isReplying ? Icons.reply : Icons.send),
+              label: Text(isReplying ? 'Replying' : 'Send'),
             ),
           ],
         ),
@@ -184,7 +255,8 @@ class _Composer extends StatelessWidget {
 class _MessageBubble extends StatelessWidget {
   final String text;
   final bool isUser;
-  const _MessageBubble({required this.text, required this.isUser});
+  final bool isLoading;
+  const _MessageBubble({required this.text, required this.isUser, this.isLoading = false});
 
   @override
   Widget build(BuildContext context) {
@@ -192,7 +264,6 @@ class _MessageBubble extends StatelessWidget {
     final bg = isUser
         ? theme.colorScheme.primaryContainer
         : theme.colorScheme.surfaceContainerHighest;
-    final align = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final radius = isUser
         ? const BorderRadius.only(
             topLeft: Radius.circular(16),
@@ -230,12 +301,17 @@ class _MessageBubble extends StatelessWidget {
             ),
           // Message bubble
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
+            constraints: BoxConstraints(maxWidth: 300 - 25 * (isUser ? 0 : 1)), // TODO: This needs to be dynamic
             child: DecoratedBox(
               decoration: BoxDecoration(color: bg, borderRadius: radius),
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Text(text),
+                child: isLoading ?
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ) : Text(text),
               ),
             ),
           ),
