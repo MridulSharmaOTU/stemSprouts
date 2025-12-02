@@ -300,8 +300,7 @@ class _MessageBubble extends StatelessWidget {
               ),
             ),
           // Message bubble
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 300 - 25 * (isUser ? 0 : 1)), // TODO: This needs to be dynamic
+          Flexible(
             child: DecoratedBox(
               decoration: BoxDecoration(color: bg, borderRadius: radius),
               child: Padding(
