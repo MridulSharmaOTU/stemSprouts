@@ -24,7 +24,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
-const _backendUrl = 'http://10.0.2.2:8000/chat/completions';
+const _backendUrl = 'https://stemsprouts.buthed.one/chat/completions'; //'http://10.0.2.2:8000/chat/completions';
 
 /// Lightweight representation of a chat message for the scaffold.
 /// Avoids pulling in full models until the API contract is finalized.

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
-from ..core.config import Settings, get_settings
+from core.config import Settings, get_settings
 
 router = APIRouter(prefix="/chat")
 
