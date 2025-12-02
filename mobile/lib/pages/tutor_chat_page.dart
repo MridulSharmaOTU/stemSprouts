@@ -16,9 +16,11 @@
 // ===============================================================
 
 import 'dart:convert'; // For json serialization
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 const _backendUrl = 'http://10.0.2.2:8000/chat/completions';
 
@@ -76,9 +78,19 @@ class _TutorChatPageState extends State<TutorChatPage> with AutomaticKeepAliveCl
   @override
   Widget build(BuildContext context) {
     super.build(context); // This is needed to keep the state alive.
-    return Container(
-      color: const Color.fromARGB(235, 129, 190, 255),
-      child: Column(
+    return Scaffold(
+      backgroundColor: const Color.fromARGB(235, 129, 190, 255),
+      appBar: AppBar(
+        title: const Text('Tutor'),
+        actions: [
+          IconButton(
+            tooltip: 'Export chat',
+            icon: const Icon(Icons.download),
+            onPressed: _exportChat,
+          ),
+        ],
+      ),
+      body: Column(
         children: [
           Expanded(
             child: ListView.builder(
@@ -185,6 +197,32 @@ class _TutorChatPageState extends State<TutorChatPage> with AutomaticKeepAliveCl
         _isReplying = false;
       });
       widget.onSend?.call(text);
+    }
+  }
+
+  Future<void> _exportChat() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final safeTimestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+      final file = File('${directory.path}/tutor_chat_$safeTimestamp.txt');
+
+      final buffer = StringBuffer();
+      for (final entry in _messages.where((m) => !m.isLoading)) {
+        final roleLabel = entry.isUser ? 'User' : 'Tutor';
+        buffer.writeln('$roleLabel: ${entry.text}');
+      }
+
+      await file.writeAsString(buffer.toString());
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Chat exported to ${file.path}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to export chat: $e')),
+      );
     }
   }
 
