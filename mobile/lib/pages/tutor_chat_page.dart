@@ -15,6 +15,7 @@
 // - Keep components small (_MessageBubble, _Composer) to reduce merge conflicts.
 // ===============================================================
 
+import 'dart:async';
 import 'dart:convert'; // For json serialization
 import 'dart:io';
 
@@ -155,13 +156,12 @@ class _TutorChatPageState extends State<TutorChatPage> with AutomaticKeepAliveCl
       // Encode the entire message history, excluding the loading placeholder
       request.body = jsonEncode({ // TODO: What happens when we reach the max context size? We need some way of "pruning" old messages.
         'messages': _messages
-            .where((m) => !m.isLoading)
             .map((m) => {'role': m.isUser ? 'user' : 'assistant', 'content': m.text})
             .toList(),
         'stream': true,
       });
 
-      final response = await client.send(request);
+      final response = await client.send(request).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         var isFirstChunk = true;
@@ -185,6 +185,13 @@ class _TutorChatPageState extends State<TutorChatPage> with AutomaticKeepAliveCl
             tutorResponse.text = 'Error processing your request: ${response.reasonPhrase}';
           });
         }
+      }
+    } on TimeoutException { // TODO: Special message type for errors?
+      if (mounted) {
+        setState(() {
+          tutorResponse.isLoading = false;
+          tutorResponse.text = 'The tutor seems to be busy. Please try again in a moment.';
+        });
       }
     } catch (e) {
       if (mounted) {

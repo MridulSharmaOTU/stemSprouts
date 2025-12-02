@@ -12,12 +12,16 @@
 // ===============================================================
 
 import 'package:flutter/material.dart';
+import 'package:stem_sprouts/services/notifications.dart';
 import 'pages/home_page.dart';
 import 'pages/tutor_chat_page.dart';
 import 'pages/progress_page.dart';
 import 'pages/settings_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
+  await NotificationService().scheduleDailyNotification();
   runApp(const MyApp());
 }
 
@@ -58,8 +62,6 @@ class _RootScaffoldState extends State<RootScaffold> {
       const ProgressPage(),
       const SettingsPage(),
     ];
-
-    final titles = <String>['Home', 'Tutor', 'Progress', 'Settings'];
 
     return Scaffold(
       // removed top AppBar so no "Home" bar appears
