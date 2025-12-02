@@ -18,6 +18,7 @@
 import 'dart:convert'; // For json serialization
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -201,10 +202,58 @@ class _TutorChatPageState extends State<TutorChatPage> with AutomaticKeepAliveCl
   }
 
   Future<void> _exportChat() async {
+    final defaultName = 'tutor_chat_${DateTime.now().toIso8601String().replaceAll(':', '-')}.txt';
+    final nameController = TextEditingController(text: defaultName);
+
+    final chosenName = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Export chat'),
+          content: TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              labelText: 'File name',
+              helperText: 'The file will be saved as a .txt document.',
+            ),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(nameController.text.trim()),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (chosenName == null || chosenName.isEmpty) {
+      return;
+    }
+
+    final sanitizedName = chosenName.toLowerCase().endsWith('.txt') ? chosenName : '$chosenName.txt';
+
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final safeTimestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
-      final file = File('${directory.path}/tutor_chat_$safeTimestamp.txt');
+      final initialDirectory = (await getApplicationDocumentsDirectory()).path;
+      final directoryPath = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: 'Choose a folder for your export',
+        initialDirectory: initialDirectory,
+      );
+
+      if (directoryPath == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Export canceled. No folder selected.')),
+        );
+        return;
+      }
+
+      final file = File('$directoryPath/$sanitizedName');
 
       final buffer = StringBuffer();
       for (final entry in _messages.where((m) => !m.isLoading)) {
