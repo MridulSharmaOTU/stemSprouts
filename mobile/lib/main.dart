@@ -21,7 +21,6 @@ import 'pages/settings_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService().init();
-  await NotificationService().scheduleDailyNotification();
   runApp(const MyApp());
 }
 
@@ -51,6 +50,28 @@ class RootScaffold extends StatefulWidget {
 
 class _RootScaffoldState extends State<RootScaffold> {
   int _index = 0; // 0: Home, 1: Tutor, 2: Progress, 3: Settings
+  final NotificationService _notificationService = NotificationService();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleDailyReminder());
+  }
+
+  Future<void> _scheduleDailyReminder() async {
+    final result = await _notificationService.scheduleDailyNotification();
+
+    if (!mounted || result.message == null) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.message!),
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

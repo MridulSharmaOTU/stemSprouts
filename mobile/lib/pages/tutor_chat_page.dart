@@ -52,6 +52,8 @@ class TutorChatPage extends StatefulWidget {
   State<TutorChatPage> createState() => _TutorChatPageState();
 }
 
+enum _ImportMode { replace, append }
+
 class _TutorChatPageState extends State<TutorChatPage> with AutomaticKeepAliveClientMixin<TutorChatPage> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
@@ -85,6 +87,11 @@ class _TutorChatPageState extends State<TutorChatPage> with AutomaticKeepAliveCl
       appBar: AppBar(
         title: const Text('Tutor'),
         actions: [
+          IconButton(
+            tooltip: 'Import chat',
+            icon: const Icon(Icons.upload_file),
+            onPressed: _importChat,
+          ),
           IconButton(
             tooltip: 'Export chat',
             icon: const Icon(Icons.download),
@@ -264,7 +271,7 @@ class _TutorChatPageState extends State<TutorChatPage> with AutomaticKeepAliveCl
 
       final buffer = StringBuffer();
       for (final entry in _messages.where((m) => !m.isLoading)) {
-        final roleLabel = entry.isUser ? 'User' : 'Tutor';
+        final roleLabel = entry.isUser ? 'user' : 'tutor';
         buffer.writeln('$roleLabel: ${entry.text}');
       }
 
@@ -278,6 +285,100 @@ class _TutorChatPageState extends State<TutorChatPage> with AutomaticKeepAliveCl
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to export chat: $e')),
+      );
+    }
+  }
+
+  Future<void> _importChat() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['txt'],
+      );
+
+      if (result == null || result.files.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Import canceled. No file selected.')),
+        );
+        return;
+      }
+
+      final pickedFile = result.files.single;
+      final path = pickedFile.path;
+      if (path == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selected file is not accessible.')),
+        );
+        return;
+      }
+
+      final file = File(path);
+      if (!await file.exists()) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selected file could not be found.')),
+        );
+        return;
+      }
+
+      final content = await file.readAsString();
+      final combinedMessage = content.trim();
+
+      if (combinedMessage.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('The selected file is empty.')),
+        );
+        return;
+      }
+
+      final parsedMessages = <_MessageEntry>[_MessageEntry(text: combinedMessage, isUser: true)];
+
+      final importMode = await showDialog<_ImportMode>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Import chat'),
+            content: const Text('Would you like to replace the current chat or append to it?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(_ImportMode.append),
+                child: const Text('Append'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(_ImportMode.replace),
+                child: const Text('Replace'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (importMode == null) return;
+
+      setState(() {
+        if (importMode == _ImportMode.replace) {
+          _messages
+            ..clear()
+            ..addAll(parsedMessages);
+        } else {
+          _messages.addAll(parsedMessages);
+        }
+      });
+
+      if (!mounted) return;
+      const summary = 'Imported conversation as a single user message.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(summary)),
+      );
+
+      _scrollToEnd();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to import chat: $e')),
       );
     }
   }
